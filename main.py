@@ -106,12 +106,22 @@ def reward_function(board):
 		return material / 39  # Normalize
 
 def save_model():
-	torch.save(model.state_dict(), MODEL_FILE)
+	torch.save({
+		'model_state_dict': model.state_dict(),
+		'optimizer_state_dict': optimizer.state_dict(),
+		'epsilon': EPSILON
+	}, MODEL_FILE)
+
 
 def load_model():
+	global EPSILON
 	if os.path.exists(MODEL_FILE):
-		model.load_state_dict(torch.load(MODEL_FILE))
+		checkpoint = torch.load(MODEL_FILE)
+		model.load_state_dict(checkpoint['model_state_dict'])
+		optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+		EPSILON = checkpoint.get('epsilon', EPSILON)
 		model.eval()
+
 
 def save_charts():
 	episodes = np.arange(len(episode_scores))
@@ -136,9 +146,6 @@ def save_charts():
 # === Training ===
 def train_agents():
 	global EPSILON
-	if continue_training:
-		load_model()
-		model.train()
 	for episode in range(EPISODES):
 		print(f"\rTraining Episode: {episode+1}/{EPISODES}", end="")
 		board = chess.Board()
@@ -194,9 +201,11 @@ def play_human():
 			webbrowser.open(f.name)
 	print("Game over!", board.result())
 
-# === Entry Point ===
 if __name__ == '__main__':
 	if train:
+		if continue_training:
+			load_model()
 		train_agents()
 	else:
+		load_model()
 		play_human()
